@@ -103,6 +103,39 @@ app.post('/tasks', verifyToken, async (req, res) => {
 });
 
 
+app.put('/tasks/:id', verifyToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { title, description, category } = req.body; // Only allow valid fields
+
+    console.log("Updating Task ID:", id);
+
+    const filter = { _id: new ObjectId(id), uid: req.user.uid };
+    const updateDoc = {
+      $set: {
+        ...(title && { title }),
+        ...(description && { description }),
+        ...(category && { category }),
+      },
+    };
+
+    const result = await tasksCollection.updateOne(filter, updateDoc);
+
+    if (result.matchedCount === 0) {
+      console.log("Task Not Found or Unauthorized:", id);
+      return res.status(404).json({ message: "Task not found or unauthorized" });
+    }
+
+    console.log("Task Updated Successfully:", id);
+    res.json({ message: "Task updated successfully", id });
+  } catch (error) {
+    console.error("Error updating task:", error);
+    res.status(500).json({ message: "Error updating task", error });
+  }
+});
+
+
+
 
 // API: Store User Info (On First Login)
 app.put('/users', async (req, res) => {
