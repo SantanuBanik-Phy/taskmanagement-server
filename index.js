@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const admin = require("firebase-admin"); 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const WebSocket = require("ws");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -38,9 +37,6 @@ async function connectDB() {
     tasksCollection = db.collection("tasks");
     usersCollection = db.collection("users");
     console.log("Connected to MongoDB");
-
-    // Start WebSocket Server for real-time updates
-    startWebSocketServer();
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
   }
@@ -60,29 +56,6 @@ const verifyToken = async (req, res, next) => {
     return res.status(401).send({ message: 'Unauthorized' });
   }
 };
-//websocket
-let wss;
-function startWebSocketServer() {
-  const wsServer = new WebSocket.Server({ port: 8080 });
-  wss = wsServer;
-
-  wsServer.on("connection", async (ws) => {
-    console.log("New WebSocket Connection Established");
-
-    // Watch for changes in the tasks collection
-    const changeStream = tasksCollection.watch();
-
-    changeStream.on("change", async () => {
-      const tasks = await tasksCollection.find().toArray();
-      ws.send(JSON.stringify(tasks));
-    });
-
-    ws.on("close", () => {
-      changeStream.close();
-      console.log("WebSocket Disconnected");
-    });
-  });
-}
 
 // API: Create a Task
 app.post('/tasks', verifyToken, async (req, res) => {
@@ -102,13 +75,11 @@ app.post('/tasks', verifyToken, async (req, res) => {
   }
 });
 
-
+// API: Update a Task
 app.put('/tasks/:id', verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
     const { title, description, category } = req.body; // Only allow valid fields
-
-    console.log("Updating Task ID:", id);
 
     const filter = { _id: new ObjectId(id), uid: req.user.uid };
     const updateDoc = {
@@ -122,17 +93,15 @@ app.put('/tasks/:id', verifyToken, async (req, res) => {
     const result = await tasksCollection.updateOne(filter, updateDoc);
 
     if (result.matchedCount === 0) {
-      console.log("Task Not Found or Unauthorized:", id);
       return res.status(404).json({ message: "Task not found or unauthorized" });
     }
 
-    console.log("Task Updated Successfully:", id);
     res.json({ message: "Task updated successfully", id });
   } catch (error) {
-    console.error("Error updating task:", error);
     res.status(500).json({ message: "Error updating task", error });
   }
 });
+
 // API: Delete a Task
 app.delete('/tasks/:id', verifyToken, async (req, res) => {
   try {
@@ -150,9 +119,6 @@ app.delete('/tasks/:id', verifyToken, async (req, res) => {
     res.status(500).send({ message: "Error deleting task", error });
   }
 });
-
-
-
 
 // API: Store User Info (On First Login)
 app.put('/users', async (req, res) => {
@@ -178,7 +144,6 @@ app.get('/tasks', verifyToken, async (req, res) => {
     res.status(500).send({ message: "Error retrieving tasks", error });
   }
 });
-
 
 // Default Route
 app.get('/', (req, res) => {
