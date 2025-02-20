@@ -60,7 +60,29 @@ const verifyToken = async (req, res, next) => {
     return res.status(401).send({ message: 'Unauthorized' });
   }
 };
+//websocket
+let wss;
+function startWebSocketServer() {
+  const wsServer = new WebSocket.Server({ port: 8080 });
+  wss = wsServer;
 
+  wsServer.on("connection", async (ws) => {
+    console.log("New WebSocket Connection Established");
+
+    // Watch for changes in the tasks collection
+    const changeStream = tasksCollection.watch();
+
+    changeStream.on("change", async () => {
+      const tasks = await tasksCollection.find().toArray();
+      ws.send(JSON.stringify(tasks));
+    });
+
+    ws.on("close", () => {
+      changeStream.close();
+      console.log("WebSocket Disconnected");
+    });
+  });
+}
 
 
 // API: Store User Info (On First Login)
