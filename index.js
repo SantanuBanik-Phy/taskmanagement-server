@@ -133,6 +133,23 @@ app.put('/tasks/:id', verifyToken, async (req, res) => {
     res.status(500).json({ message: "Error updating task", error });
   }
 });
+// API: Delete a Task
+app.delete('/tasks/:id', verifyToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id), uid: req.user.uid };
+
+    const result = await tasksCollection.deleteOne(filter);
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: "Task not found or unauthorized" });
+    }
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Error deleting task", error });
+  }
+});
 
 
 
