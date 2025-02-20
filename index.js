@@ -119,6 +119,17 @@ app.put('/users', async (req, res) => {
   }
 });
 
+// API: Get User Tasks
+app.get('/tasks', verifyToken, async (req, res) => {
+  try {
+    const tasks = await tasksCollection.find({ uid: req.user.uid }).toArray();
+    res.send(tasks);
+  } catch (error) {
+    res.status(500).send({ message: "Error retrieving tasks", error });
+  }
+});
+
+
 // Default Route
 app.get('/', (req, res) => {
   res.send('Task Management Server is running');
