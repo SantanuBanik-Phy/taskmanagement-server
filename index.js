@@ -84,6 +84,25 @@ function startWebSocketServer() {
   });
 }
 
+// API: Create a Task
+app.post('/tasks', verifyToken, async (req, res) => {
+  try {
+    const task = req.body;
+
+    // Add a valid timestamp to the task
+    task.timestamp = new Date().toISOString(); // ISO string format for date
+
+    // Ensure the task is associated with the user
+    task.uid = req.user.uid; 
+
+    const result = await tasksCollection.insertOne(task);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Error adding task", error });
+  }
+});
+
+
 
 // API: Store User Info (On First Login)
 app.put('/users', async (req, res) => {
